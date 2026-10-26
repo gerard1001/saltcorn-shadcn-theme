@@ -1,6 +1,5 @@
 /* shadcn-theme client helpers */
 (function () {
-  var MODE_KEY = "sc-shadcn-mode";
 
   function currentMode() {
     return document.documentElement.getAttribute("data-bs-theme") === "dark"
@@ -15,21 +14,8 @@
     window._sc_lightmode = mode;
   }
 
-  // the header toggle (window.scToggleMode) is defined inline in the page head
-
-  // "Follow system": track OS changes unless the visitor picked a mode
-  if (window.matchMedia) {
-    var mq = window.matchMedia("(prefers-color-scheme: dark)");
-    var onChange = function (e) {
-      var stored = null;
-      try {
-        stored = localStorage.getItem(MODE_KEY);
-      } catch (err) {}
-      if (!stored && window._sc_shadcn_auto) applyMode(e.matches ? "dark" : "light");
-    };
-    if (mq.addEventListener) mq.addEventListener("change", onChange);
-    else if (mq.addListener) mq.addListener(onChange);
-  }
+  // the header toggle (window.scToggleMode) and following the system mode
+  // live are both handled inline in the page head
 
   // unread notification indicator on the user avatar (called by core)
   window.update_theme_notification_count = function (n) {

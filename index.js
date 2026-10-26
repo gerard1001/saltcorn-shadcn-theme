@@ -751,9 +751,18 @@ const modeScript = (mode, allowToggle) => `<script>
   };`
       : ""
   }
-  if (mode === "auto")
-    mode = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  var mq = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+  if (mode === "auto") mode = mq && mq.matches ? "dark" : "light";
   document.documentElement.setAttribute("data-bs-theme", mode);
+  // "Follow system": switch live when the OS appearance changes, unless the
+  // visitor picked a mode with the header toggle
+  if (configured === "auto" && mq && mq.addEventListener)
+    mq.addEventListener("change", function (e) {
+      if (override) return;
+      var next = e.matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-bs-theme", next);
+      window._sc_lightmode = next;
+    });
 })();
 </script>`;
 
@@ -1143,7 +1152,7 @@ const configuration_workflow = () =>
                 required: true,
                 default: "Sidebar",
                 attributes: { options: ["Sidebar", "Floating", "Inset"] },
-                showIf: { layout_style: "Sidebar" },
+                showIf: { layout_style: ["Sidebar", "No menu"] },
               },
               {
                 name: "collapsible_sidebar",
@@ -1151,13 +1160,13 @@ const configuration_workflow = () =>
                 sublabel: "Show a button that hides the sidebar on desktop",
                 type: "Bool",
                 default: true,
-                showIf: { layout_style: "Sidebar" },
+                showIf: { layout_style: ["Sidebar", "No menu"] },
               },
               {
                 name: "sidebar_groups",
                 label: "Sidebar menu groups",
                 sublabel:
-                  "How menu items with sub-items start out. Expanded opens the top level only; deeper groups stay collapsed. The group holding the current page is always open",
+                  "How menu items with sub-items start out. Expanded opens the top level only; deeper groups stay collapsed. The group holding the current page is always open. With the Topbar layout this is the menu on phones",
                 type: "String",
                 required: true,
                 default: "collapsed",
@@ -1180,7 +1189,7 @@ const configuration_workflow = () =>
                 name: "show_title",
                 label: "Show page title in header",
                 type: "Bool",
-                showIf: { layout_style: "Sidebar" },
+                showIf: { layout_style: ["Sidebar", "No menu"] },
               },
               {
                 name: "fluid",
@@ -1365,7 +1374,7 @@ const configuration_workflow = () =>
                 name: "sidebar_bg",
                 label: "Sidebar background",
                 sublabel:
-                  "Text, hover and borders adapt to the color. Default is the base color's sidebar tone; Dark is a dark sidebar in light mode too",
+                  "Text, hover and borders adapt to the color. Default is the base color's sidebar tone; Dark is a dark sidebar in light mode too. With the Topbar layout this is the menu on phones",
                 type: "String",
                 required: true,
                 default: "Default",
