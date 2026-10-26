@@ -159,16 +159,17 @@ body {
   display: flex;
   align-items: stretch;
 }
+/* plain block, not a flex column: as a flex item the content got a definite
+   height, so a page element with "height: 100%" (a common builder setting)
+   sized itself to the whole page and pushed the rest out of the shell, past
+   the sticky sidebar */
 .sc-main {
   flex: 1 1 auto;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
 }
 .sc-content {
   padding-top: 0.75rem;
   padding-bottom: 1.25rem;
-  flex: 1 0 auto;
 }
 
 /* sidebar */

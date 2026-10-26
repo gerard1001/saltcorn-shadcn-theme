@@ -620,6 +620,9 @@
     var html = document.documentElement;
     var bar = document.querySelector(".sc-topbar, .sc-header");
     if (!bar) return;
+    // heroes are for the Topbar layout only: the Sidebar layout's header sits
+    // beside the sidebar, where pulling content up under it doesn't work
+    var heroes = bar.classList.contains("sc-topbar");
     var transparent = html.classList.contains("sc-topbar-transparent");
     var place = null;
     // runs again after core swaps the page content in place (pagination and
@@ -658,12 +661,14 @@
       };
       place();
     };
-    setup();
-    document.addEventListener("pjax-loaded", setup);
-    if (window.ResizeObserver)
-      new ResizeObserver(function () {
-        if (place) place();
-      }).observe(bar);
+    if (heroes) {
+      setup();
+      document.addEventListener("pjax-loaded", setup);
+      if (window.ResizeObserver)
+        new ResizeObserver(function () {
+          if (place) place();
+        }).observe(bar);
+    }
     if (!transparent) return;
     // frosted once the page scrolls under the bar
     var on = null;

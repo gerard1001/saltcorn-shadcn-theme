@@ -20,7 +20,7 @@ without changes to Saltcorn core.
   top bar can also be transparent (frosted once the page scrolls under it), and fixed or
   scrolling with the page, with an opacity setting for the frosted state. Applies to the
   Topbar layout's bar and the Sidebar layout's header.
-- **Page heroes:** a container with a background image or gradient at the very top of a
+- **Page heroes** (Topbar layout): a container with a background image or gradient at the very top of a
   page sits flush under the top bar. Under a transparent bar it runs up behind it, so the
   bar's items sit on the image until the page scrolls. An option switches the transparent
   bar to light text while it sits on the image, for dark photos. Admins' edit bar becomes a
