@@ -781,6 +781,7 @@ const barClasses = (config) => {
   return [
     config.topbar_position === "static" && "sc-topbar-static",
     bg === "Transparent" && "sc-topbar-transparent",
+    bg === "Transparent" && config.topbar_light_text && "sc-topbar-light-text",
     bg !== "Default" && bg !== "Transparent" && "sc-topbar-solid",
   ]
     .filter(Boolean)
@@ -1382,6 +1383,34 @@ const configuration_workflow = () =>
                 attributes: { options: barBgOptions(topbarBackgrounds) },
               },
               ...barCustomFields("topbar", "top bar"),
+              {
+                name: "topbar_light_text",
+                label: "Light text on the transparent bar",
+                sublabel:
+                  "White text and icons while the bar sits on a background image at the top of the page (for dark images)",
+                type: "Bool",
+                showIf: { topbar_bg: "Transparent" },
+              },
+              {
+                name: "topbar_opacity",
+                label: "Top bar opacity",
+                sublabel:
+                  "How solid the frosted bar is (Default, and Transparent once scrolled). Lower lets more of the page show through",
+                type: "String",
+                required: true,
+                default: "85",
+                attributes: {
+                  options: [
+                    { name: "100", label: "100% (solid)" },
+                    { name: "85", label: "85%" },
+                    { name: "70", label: "70%" },
+                    { name: "50", label: "50%" },
+                    { name: "35", label: "35%" },
+                    { name: "20", label: "20%" },
+                  ],
+                },
+                showIf: { topbar_bg: ["Default", "Transparent"] },
+              },
               {
                 name: "topbar_position",
                 label: "Top bar position",

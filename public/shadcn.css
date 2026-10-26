@@ -159,16 +159,17 @@ body {
   display: flex;
   align-items: stretch;
 }
+/* plain block, not a flex column: as a flex item the content got a definite
+   height, so a page element with "height: 100%" (a common builder setting)
+   sized itself to the whole page and pushed the rest out of the shell, past
+   the sticky sidebar */
 .sc-main {
   flex: 1 1 auto;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
 }
 .sc-content {
   padding-top: 0.75rem;
   padding-bottom: 1.25rem;
-  flex: 1 0 auto;
 }
 
 /* sidebar */
@@ -569,7 +570,7 @@ body {
   height: 3.5rem;
   padding: 0 1rem;
   border-bottom: 1px solid var(--sc-border);
-  background: var(--sc-topbar-bg, rgba(var(--bs-body-bg-rgb), 0.85));
+  background: var(--sc-topbar-bg, rgba(var(--bs-body-bg-rgb), var(--sc-topbar-alpha, 0.85)));
   backdrop-filter: blur(8px);
 }
 .sc-sidebar-inset .sc-header {
@@ -622,11 +623,57 @@ html.sc-topbar-static :is(.sc-topbar, .sc-header) {
 html.sc-topbar-transparent:not(.sc-scrolled) :is(.sc-topbar, .sc-header),
 html.sc-topbar-transparent.sc-topbar-static :is(.sc-topbar, .sc-header) {
   background: transparent;
-  border-bottom-color: transparent;
   backdrop-filter: none;
+}
+/* on a page hero there's no border; once scrolled the shadow and blur
+   separate the bar from the page */
+html.sc-topbar-transparent.sc-has-hero :is(.sc-topbar, .sc-header) {
+  border-bottom-color: transparent;
+}
+html.sc-topbar-transparent.sc-has-hero.sc-scrolled:not(.sc-topbar-static) :is(.sc-topbar, .sc-header) {
+  box-shadow: var(--sc-shadow-md);
 }
 html.sc-topbar-transparent.sc-scrolled:not(.sc-topbar-static) :is(.sc-topbar, .sc-header) {
   box-shadow: var(--sc-shadow-xs);
+}
+
+/* container background images: core renders an absolute <img> but leaves the
+   container static, so the image sizes itself to the viewport (and, in a
+   centred flex container, centres there, spilling over whatever is above).
+   Pin it to its own container, so it covers exactly the configured box */
+:is([style*="position:static"], :not([style*="position:"])):has(> .containerbgimage) {
+  position: relative !important;
+  isolation: isolate;
+}
+.containerbgimage {
+  top: 0;
+}
+
+/* page builder: core sizes a container's drop area with min-height: 100%,
+   which is nothing when the container only has a min-height, so an empty
+   container with a min-height only accepted drops along its top edge */
+.kontainer[style*="min-height"] > div,
+.kontainer[style*="min-height"] > div > .canvas {
+  min-height: inherit;
+}
+
+/* admins' edit bar on a page hero (shadcn.js moves it there) */
+.sc-hero-admin.admin-edit-bar {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 1;
+  margin: 0 !important;
+  max-width: calc(100% - 1.5rem);
+  border-radius: 9999px;
+  background: rgba(var(--bs-body-bg-rgb), 0.85);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--sc-shadow-xs);
+  color: var(--sc-foreground);
+  text-align: start;
+}
+.sc-hero-admin.admin-edit-bar > .card-body {
+  padding: 0.25rem 0.75rem !important;
 }
 
 /* top navbar layout */
@@ -635,7 +682,7 @@ html.sc-topbar-transparent.sc-scrolled:not(.sc-topbar-static) :is(.sc-topbar, .s
   top: 0;
   z-index: 1020;
   border-bottom: 1px solid var(--sc-border);
-  background: var(--sc-topbar-bg, rgba(var(--bs-body-bg-rgb), 0.85));
+  background: var(--sc-topbar-bg, rgba(var(--bs-body-bg-rgb), var(--sc-topbar-alpha, 0.85)));
   backdrop-filter: blur(8px);
 }
 .sc-topbar > div {

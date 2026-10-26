@@ -904,6 +904,30 @@ const barCss = (config, mode, scope) => {
       );
     }
   }
+  // "Light text" on a transparent bar, while it sits on a page hero's image
+  // (shadcn.js sets .sc-has-hero; once scrolled the bar is frosted again)
+  if (config.topbar_bg === "Transparent" && config.topbar_light_text) {
+    const white = [255, 255, 255];
+    const on = `${scope}.sc-topbar-light-text.sc-has-hero:is(:not(.sc-scrolled), .sc-topbar-static) :is(.sc-topbar, .sc-header)`;
+    out.push(
+      declBlock(on, {
+        ...surfaceVars([0, 0, 0], white),
+        "--sc-muted-foreground": "rgba(255, 255, 255, 0.8)",
+        "--bs-secondary-color": "rgba(255, 255, 255, 0.8)",
+        "--sc-accent": "rgba(255, 255, 255, 0.15)",
+        "--sc-accent-hover": "rgba(255, 255, 255, 0.22)",
+        "--sc-muted": "rgba(255, 255, 255, 0.15)",
+        "--sc-border": "rgba(255, 255, 255, 0.3)",
+        "--bs-border-color": "rgba(255, 255, 255, 0.3)",
+        "--bs-body-bg": "rgba(255, 255, 255, 0.1)",
+        "text-shadow": "0 1px 2px rgb(0 0 0 / 0.35)",
+      }),
+      declBlock(
+        `${on} :is(.dropdown-menu, .modal, .popover, .offcanvas:not(.sc-sidebar))`,
+        { ...reset, "text-shadow": "none" },
+      ),
+    );
+  }
   return out.join("\n");
 };
 
@@ -930,6 +954,10 @@ const themeCss = (config = {}) => {
       "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
     // capped so large base sizes don't make the sidebar take over the screen
     "--sc-sidebar-width": "min(16rem, 320px)",
+    // frosted top bar: how much of the page background shows through
+    "--sc-topbar-alpha": String(
+      Math.min(100, Math.max(0, +config.topbar_opacity || 85)) / 100,
+    ),
   };
   return [
     declBlock(":root", {

@@ -584,10 +584,93 @@
     if (monacoHooked) applyMonacoTheme();
   }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
 
-  // transparent fixed top bar: frosted once the page scrolls under it
+  // a container with a background image (or gradient) at the very top of the
+  // page sits flush under the top bar; under a transparent bar it moves up
+  // behind it, so the bar's items sit on the image
+  function pageHero() {
+    var main = document.getElementById("page-inner-content");
+    var first = main && main.firstElementChild;
+    var adminBar = null;
+    if (first && first.classList.contains("admin-edit-bar")) {
+      adminBar = first;
+      first = first.nextElementSibling;
+    }
+    if (!first || first.id === "toasts-area") return null;
+    var hasBg =
+      first.querySelector(":scope > .containerbgimage") ||
+      getComputedStyle(first).backgroundImage !== "none";
+    if (!hasBg) return null;
+    // core's background <img> is absolute against the nearest positioned
+    // ancestor, so a static container lets it stretch to the viewport height;
+    // pin it to the container so the configured height holds
+    first.style.position = "relative";
+    first.style.isolation = "isolate";
+    var img = first.querySelector(":scope > .containerbgimage");
+    if (img) img.style.top = "0";
+    // the admins' edit bar becomes a small pill in the hero's corner, so the
+    // hero still starts at the top as it does for visitors
+    if (adminBar) {
+      adminBar.classList.add("sc-hero-admin");
+      first.appendChild(adminBar);
+    }
+    return first;
+  }
+
   (function () {
     var html = document.documentElement;
-    if (!html.classList.contains("sc-topbar-transparent")) return;
+    var bar = document.querySelector(".sc-topbar, .sc-header");
+    if (!bar) return;
+    // heroes are for the Topbar layout only: the Sidebar layout's header sits
+    // beside the sidebar, where pulling content up under it doesn't work
+    var heroes = bar.classList.contains("sc-topbar");
+    var transparent = html.classList.contains("sc-topbar-transparent");
+    var place = null;
+    // runs again after core swaps the page content in place (pagination and
+    // other state links fire "pjax-loaded"), as the hero is then a new element
+    var setup = function () {
+      var main = document.getElementById("page-inner-content");
+      var done = main && main.querySelector(":scope > [data-sc-hero]");
+      if (done && place) return; // content not replaced (e.g. a local view)
+      var hero = main && pageHero();
+      html.classList.toggle("sc-has-hero", !!hero);
+      place = null;
+      if (!hero) return;
+      hero.setAttribute("data-sc-hero", "");
+      var hcs = getComputedStyle(hero);
+      var padTop = parseFloat(hcs.paddingTop) || 0;
+      var padL = parseFloat(hcs.paddingLeft) || 0;
+      var padR = parseFloat(hcs.paddingRight) || 0;
+      place = function () {
+        var mcs = getComputedStyle(main);
+        var gap = parseFloat(mcs.paddingTop) || 0;
+        // reach the content area's edges too (full page width already does);
+        // its own content stays in line with the rest of the page
+        if (!hero.classList.contains("full-page-width")) {
+          var sl = parseFloat(mcs.paddingLeft) || 0;
+          var sr = parseFloat(mcs.paddingRight) || 0;
+          hero.style.marginLeft = -sl + "px";
+          hero.style.marginRight = -sr + "px";
+          hero.style.width = "calc(100% + " + (sl + sr) + "px)";
+          hero.style.paddingLeft = padL + sl + "px";
+          hero.style.paddingRight = padR + sr + "px";
+        }
+        var under = transparent ? bar.offsetHeight : 0;
+        hero.style.marginTop = -(gap + under) + "px";
+        if (!transparent) return;
+        hero.style.paddingTop = padTop + under + "px";
+      };
+      place();
+    };
+    if (heroes) {
+      setup();
+      document.addEventListener("pjax-loaded", setup);
+      if (window.ResizeObserver)
+        new ResizeObserver(function () {
+          if (place) place();
+        }).observe(bar);
+    }
+    if (!transparent) return;
+    // frosted once the page scrolls under the bar
     var on = null;
     var update = function () {
       var s = window.scrollY > 4;
