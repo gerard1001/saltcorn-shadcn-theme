@@ -18,7 +18,12 @@ without changes to Saltcorn core.
   a custom color (optionally different in dark mode); text, hover states, borders and inputs
   adapt so they stay readable, while menus opened from the bar keep the page's colors. The
   top bar can also be transparent (frosted once the page scrolls under it), and fixed or
-  scrolling with the page. Applies to the Topbar layout's bar and the Sidebar layout's header.
+  scrolling with the page, with an opacity setting for the frosted state. Applies to the
+  Topbar layout's bar and the Sidebar layout's header.
+- **Page heroes:** a container with a background image or gradient at the very top of a
+  page sits flush under the top bar. Under a transparent bar it runs up behind it, so the
+  bar's items sit on the image until the hero scrolls away. An option switches the transparent bar to light
+  text while it sits on the image, for dark photos. Admins' edit bar moves below it.
 - **No bounce:** the page doesn't rubber-band when scrolled past its ends.
 - **Header** on desktop only appears when it has something to show (sidebar toggle, title,
   mode toggle or secondary menu items); on mobile it always holds the menu button.

@@ -584,17 +584,88 @@
     if (monacoHooked) applyMonacoTheme();
   }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
 
-  // transparent fixed top bar: frosted once the page scrolls under it
+  // a container with a background image (or gradient) at the very top of the
+  // page sits flush under the top bar; under a transparent bar it moves up
+  // behind it, so the bar's items sit on the image
+  function pageHero() {
+    var main = document.getElementById("page-inner-content");
+    var first = main && main.firstElementChild;
+    var adminBar = null;
+    if (first && first.classList.contains("admin-edit-bar")) {
+      adminBar = first;
+      first = first.nextElementSibling;
+    }
+    if (!first || first.id === "toasts-area") return null;
+    var hasBg =
+      first.querySelector(":scope > .containerbgimage") ||
+      getComputedStyle(first).backgroundImage !== "none";
+    if (!hasBg) return null;
+    // core's background <img> is absolute against the nearest positioned
+    // ancestor, so a static container lets it stretch to the viewport height;
+    // pin it to the container so the configured height holds
+    first.style.position = "relative";
+    first.style.isolation = "isolate";
+    var img = first.querySelector(":scope > .containerbgimage");
+    if (img) img.style.top = "0";
+    // the admins' edit bar becomes a small pill in the hero's corner, so the
+    // hero still starts at the top as it does for visitors
+    if (adminBar) {
+      adminBar.classList.add("sc-hero-admin");
+      first.appendChild(adminBar);
+    }
+    return first;
+  }
+
   (function () {
     var html = document.documentElement;
-    if (!html.classList.contains("sc-topbar-transparent")) return;
+    var bar = document.querySelector(".sc-topbar, .sc-header");
+    var main = document.getElementById("page-inner-content");
+    var transparent = html.classList.contains("sc-topbar-transparent");
+    var hero = bar && main && pageHero();
+    if (hero) {
+      var hcs = getComputedStyle(hero);
+      var padTop = parseFloat(hcs.paddingTop) || 0;
+      var padL = parseFloat(hcs.paddingLeft) || 0;
+      var padR = parseFloat(hcs.paddingRight) || 0;
+      var place = function () {
+        var mcs = getComputedStyle(main);
+        var gap = parseFloat(mcs.paddingTop) || 0;
+        // reach the content area's edges too (full page width already does);
+        // its own content stays in line with the rest of the page
+        if (!hero.classList.contains("full-page-width")) {
+          var sl = parseFloat(mcs.paddingLeft) || 0;
+          var sr = parseFloat(mcs.paddingRight) || 0;
+          hero.style.marginLeft = -sl + "px";
+          hero.style.marginRight = -sr + "px";
+          hero.style.width = "calc(100% + " + (sl + sr) + "px)";
+          hero.style.paddingLeft = padL + sl + "px";
+          hero.style.paddingRight = padR + sr + "px";
+        }
+        var under = transparent ? bar.offsetHeight : 0;
+        hero.style.marginTop = -(gap + under) + "px";
+        if (!transparent) return;
+        hero.style.paddingTop = padTop + under + "px";
+      };
+      place();
+      html.classList.add("sc-has-hero");
+      if (window.ResizeObserver) new ResizeObserver(place).observe(bar);
+    }
+    if (!transparent) return;
+    // frosted once the page scrolls under the bar; with a hero, only once the
+    // hero itself has scrolled away
+    var heroBottom = function () {
+      var b = hero.getBoundingClientRect().bottom;
+      var img = hero.querySelector(":scope > .containerbgimage");
+      return img ? Math.max(b, img.getBoundingClientRect().bottom) : b;
+    };
     var on = null;
     var update = function () {
-      var s = window.scrollY > 4;
+      var s = hero ? heroBottom() <= bar.offsetHeight : window.scrollY > 4;
       if (s !== on) html.classList.toggle("sc-scrolled", (on = s));
     };
     update();
     window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update, { passive: true });
   })();
 
   // theme settings (site or personal): the Mode shown there is what gets

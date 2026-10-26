@@ -569,7 +569,7 @@ body {
   height: 3.5rem;
   padding: 0 1rem;
   border-bottom: 1px solid var(--sc-border);
-  background: var(--sc-topbar-bg, rgba(var(--bs-body-bg-rgb), 0.85));
+  background: var(--sc-topbar-bg, rgba(var(--bs-body-bg-rgb), var(--sc-topbar-alpha, 0.85)));
   backdrop-filter: blur(8px);
 }
 .sc-sidebar-inset .sc-header {
@@ -629,13 +629,52 @@ html.sc-topbar-transparent.sc-scrolled:not(.sc-topbar-static) :is(.sc-topbar, .s
   box-shadow: var(--sc-shadow-xs);
 }
 
+/* container background images: core renders an absolute <img> but leaves the
+   container static, so the image sizes itself to the viewport (and, in a
+   centred flex container, centres there, spilling over whatever is above).
+   Pin it to its own container, so it covers exactly the configured box */
+:is([style*="position:static"], :not([style*="position:"])):has(> .containerbgimage) {
+  position: relative !important;
+  isolation: isolate;
+}
+.containerbgimage {
+  top: 0;
+}
+
+/* page builder: core sizes a container's drop area with min-height: 100%,
+   which is nothing when the container only has a min-height, so an empty
+   container with a min-height only accepted drops along its top edge */
+.kontainer[style*="min-height"] > div,
+.kontainer[style*="min-height"] > div > .canvas {
+  min-height: inherit;
+}
+
+/* admins' edit bar on a page hero (shadcn.js moves it there) */
+.sc-hero-admin.admin-edit-bar {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 1;
+  margin: 0 !important;
+  max-width: calc(100% - 1.5rem);
+  border-radius: 9999px;
+  background: rgba(var(--bs-body-bg-rgb), 0.85);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--sc-shadow-xs);
+  color: var(--sc-foreground);
+  text-align: start;
+}
+.sc-hero-admin.admin-edit-bar > .card-body {
+  padding: 0.25rem 0.75rem !important;
+}
+
 /* top navbar layout */
 .sc-topbar {
   position: sticky;
   top: 0;
   z-index: 1020;
   border-bottom: 1px solid var(--sc-border);
-  background: var(--sc-topbar-bg, rgba(var(--bs-body-bg-rgb), 0.85));
+  background: var(--sc-topbar-bg, rgba(var(--bs-body-bg-rgb), var(--sc-topbar-alpha, 0.85)));
   backdrop-filter: blur(8px);
 }
 .sc-topbar > div {
