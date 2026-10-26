@@ -622,8 +622,15 @@ html.sc-topbar-static :is(.sc-topbar, .sc-header) {
 html.sc-topbar-transparent:not(.sc-scrolled) :is(.sc-topbar, .sc-header),
 html.sc-topbar-transparent.sc-topbar-static :is(.sc-topbar, .sc-header) {
   background: transparent;
-  border-bottom-color: transparent;
   backdrop-filter: none;
+}
+/* on a page hero there's no border; once scrolled the shadow and blur
+   separate the bar from the page */
+html.sc-topbar-transparent.sc-has-hero :is(.sc-topbar, .sc-header) {
+  border-bottom-color: transparent;
+}
+html.sc-topbar-transparent.sc-has-hero.sc-scrolled:not(.sc-topbar-static) :is(.sc-topbar, .sc-header) {
+  box-shadow: var(--sc-shadow-md);
 }
 html.sc-topbar-transparent.sc-scrolled:not(.sc-topbar-static) :is(.sc-topbar, .sc-header) {
   box-shadow: var(--sc-shadow-xs);

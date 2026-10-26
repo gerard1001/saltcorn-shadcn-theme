@@ -22,8 +22,9 @@ without changes to Saltcorn core.
   Topbar layout's bar and the Sidebar layout's header.
 - **Page heroes:** a container with a background image or gradient at the very top of a
   page sits flush under the top bar. Under a transparent bar it runs up behind it, so the
-  bar's items sit on the image until the hero scrolls away. An option switches the transparent bar to light
-  text while it sits on the image, for dark photos. Admins' edit bar moves below it.
+  bar's items sit on the image until the page scrolls. An option switches the transparent
+  bar to light text while it sits on the image, for dark photos. Admins' edit bar becomes a
+  small pill in the hero's corner.
 - **No bounce:** the page doesn't rubber-band when scrolled past its ends.
 - **Header** on desktop only appears when it has something to show (sidebar toggle, title,
   mode toggle or secondary menu items); on mobile it always holds the menu button.

@@ -619,15 +619,25 @@
   (function () {
     var html = document.documentElement;
     var bar = document.querySelector(".sc-topbar, .sc-header");
-    var main = document.getElementById("page-inner-content");
+    if (!bar) return;
     var transparent = html.classList.contains("sc-topbar-transparent");
-    var hero = bar && main && pageHero();
-    if (hero) {
+    var place = null;
+    // runs again after core swaps the page content in place (pagination and
+    // other state links fire "pjax-loaded"), as the hero is then a new element
+    var setup = function () {
+      var main = document.getElementById("page-inner-content");
+      var done = main && main.querySelector(":scope > [data-sc-hero]");
+      if (done && place) return; // content not replaced (e.g. a local view)
+      var hero = main && pageHero();
+      html.classList.toggle("sc-has-hero", !!hero);
+      place = null;
+      if (!hero) return;
+      hero.setAttribute("data-sc-hero", "");
       var hcs = getComputedStyle(hero);
       var padTop = parseFloat(hcs.paddingTop) || 0;
       var padL = parseFloat(hcs.paddingLeft) || 0;
       var padR = parseFloat(hcs.paddingRight) || 0;
-      var place = function () {
+      place = function () {
         var mcs = getComputedStyle(main);
         var gap = parseFloat(mcs.paddingTop) || 0;
         // reach the content area's edges too (full page width already does);
@@ -647,25 +657,22 @@
         hero.style.paddingTop = padTop + under + "px";
       };
       place();
-      html.classList.add("sc-has-hero");
-      if (window.ResizeObserver) new ResizeObserver(place).observe(bar);
-    }
-    if (!transparent) return;
-    // frosted once the page scrolls under the bar; with a hero, only once the
-    // hero itself has scrolled away
-    var heroBottom = function () {
-      var b = hero.getBoundingClientRect().bottom;
-      var img = hero.querySelector(":scope > .containerbgimage");
-      return img ? Math.max(b, img.getBoundingClientRect().bottom) : b;
     };
+    setup();
+    document.addEventListener("pjax-loaded", setup);
+    if (window.ResizeObserver)
+      new ResizeObserver(function () {
+        if (place) place();
+      }).observe(bar);
+    if (!transparent) return;
+    // frosted once the page scrolls under the bar
     var on = null;
     var update = function () {
-      var s = hero ? heroBottom() <= bar.offsetHeight : window.scrollY > 4;
+      var s = window.scrollY > 4;
       if (s !== on) html.classList.toggle("sc-scrolled", (on = s));
     };
     update();
     window.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update, { passive: true });
   })();
 
   // theme settings (site or personal): the Mode shown there is what gets
