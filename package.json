@@ -10,7 +10,7 @@
     "@saltcorn/data": "^1.0.0",
     "@saltcorn/markup": "^1.0.0"
   },
-  "author": "Saltcorn",
+  "author": "RUTAYISIRE Gerard",
   "license": "MIT",
   "devDependencies": {
     "jest": "^29.7.0"
