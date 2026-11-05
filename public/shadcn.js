@@ -512,8 +512,18 @@
   /* ------------------------------------------------------------ monaco
    * Monaco themes are global, and every editor created without a theme (e.g.
    * the builder's formula inputs) resets it to the light "vs". Keep a theme
-   * that matches the page: in dark mode the editor background is the page's.
+   * that matches the page: the editor background is the page's, or muted
+   * when the page is as white as the card it sits on (it has no border).
    */
+  function cssColor(v) {
+    var probe = document.createElement("span");
+    probe.style.display = "none";
+    probe.style.backgroundColor = v;
+    document.body.appendChild(probe);
+    var c = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return c;
+  }
   function rgbToHex(c) {
     var m = String(c).match(/\d+(\.\d+)?/g);
     if (!m || m.length < 3) return null;
@@ -532,10 +542,14 @@
     if (!mo || !mo.editor || !mo.editor.defineTheme) return false;
     var dark = currentMode() === "dark";
     var bg = rgbToHex(getComputedStyle(document.body).backgroundColor);
+    if (!dark && bg && bg === rgbToHex(cssColor("var(--sc-card)")))
+      bg = rgbToHex(cssColor("var(--sc-muted)"));
+    if (bg) document.documentElement.style.setProperty("--sc-editor-bg", bg);
     try {
-      if (dark && bg) {
-        mo.editor.defineTheme("sc-dark", {
-          base: "vs-dark",
+      if (bg) {
+        var name = dark ? "sc-dark" : "sc-light";
+        mo.editor.defineTheme(name, {
+          base: dark ? "vs-dark" : "vs",
           inherit: true,
           rules: [],
           colors: {
@@ -545,8 +559,8 @@
             "editorStickyScroll.background": bg,
           },
         });
-        mo.editor.setTheme("sc-dark");
-      } else mo.editor.setTheme("vs");
+        mo.editor.setTheme(name);
+      } else mo.editor.setTheme(dark ? "vs-dark" : "vs");
     } catch (e) {}
     if (!monacoHooked && mo.editor.onDidCreateEditor) {
       monacoHooked = true;

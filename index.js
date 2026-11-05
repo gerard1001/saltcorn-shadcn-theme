@@ -126,12 +126,28 @@ const htmlId = (s) => String(s).replace(/[^A-Za-z0-9_-]/g, "");
  * split the menu into the main navigation, the secondary (header) menu and
  * the user menu
  */
+// nothing to show: e.g. a Dynamic menu item without a label formula gives one
+// such item per table row
+const isBlank = (item) =>
+  item.type !== "Separator" &&
+  item.type !== "Search" &&
+  !item.link &&
+  !(item.subitems && item.subitems.length) &&
+  !String(item.label || "").trim();
+
+const dropBlank = (items) =>
+  items
+    .map((item) =>
+      item.subitems ? { ...item, subitems: dropBlank(item.subitems) } : item
+    )
+    .filter((item) => !isBlank(item));
+
 const splitMenu = (menu) => {
   const primary = [];
   const secondary = [];
   const user = [];
   for (const section of menu || []) {
-    for (const item of section.items || []) {
+    for (const item of dropBlank(section.items || [])) {
       if (item.location === "Mobile Bottom") continue;
       if (section.isUser || item.isUser) user.push(item);
       else if (item.location === "Secondary Menu") secondary.push(item);
@@ -1262,6 +1278,55 @@ const configuration_workflow = () =>
                     { name: "75", label: "75%" },
                     { name: "50", label: "50%" },
                     { name: "25", label: "25% (dim)" },
+                  ],
+                },
+              },
+              {
+                name: "light_shade",
+                label: "Light mode shade",
+                sublabel:
+                  "White keeps light mode plain white. Higher values tint the page, sidebar and muted areas with the base color's hue (grey, blue, green…); cards stay white",
+                type: "String",
+                required: true,
+                default: "0",
+                attributes: {
+                  options: [
+                    { name: "0", label: "White" },
+                    { name: "25", label: "25%" },
+                    { name: "50", label: "50%" },
+                    { name: "75", label: "75%" },
+                    { name: "100", label: "100% (strongest)" },
+                  ],
+                },
+              },
+              {
+                name: "light_page",
+                label: "Light mode page background",
+                sublabel: "Keep the main page white or near white while the rest is tinted",
+                type: "String",
+                required: true,
+                default: "tinted",
+                attributes: {
+                  options: [
+                    { name: "tinted", label: "Tinted" },
+                    { name: "near-white", label: "Near white" },
+                    { name: "white", label: "White" },
+                  ],
+                },
+                showIf: { light_shade: ["25", "50", "75", "100"] },
+              },
+              {
+                name: "light_base_color",
+                label: "Light mode base color",
+                sublabel:
+                  "Use a different base color in light mode, e.g. Harbor for a blueish tint while dark mode keeps Spruce",
+                type: "String",
+                required: true,
+                default: "Same",
+                attributes: {
+                  options: [
+                    { name: "Same", label: "Same as Base color" },
+                    ...Object.keys(bases).map((name) => ({ name, label: name })),
                   ],
                 },
               },

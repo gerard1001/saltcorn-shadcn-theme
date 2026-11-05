@@ -2944,6 +2944,52 @@ html[data-bs-theme="dark"] .wf-drawer {
   --bs-card-border-color: var(--sc-border);
 }
 
+/* ------------------------------------------------------------ bare selects
+ * Core renders a few selects with no class at all (e.g. the language picker
+ * on the user settings page). Give them a compact
+ * form-select look; plugins that style their own selects give them a class.
+ */
+.sc-content select:not([class]):not([multiple]):not([size]) {
+  --sc-bare-select-chevron: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  appearance: none;
+  box-sizing: border-box;
+  height: var(--st-h-sm);
+  max-width: 100%;
+  padding: 0 1.75rem 0 0.625rem;
+  font: inherit;
+  font-size: var(--st-input-fs);
+  line-height: 1.25rem;
+  color: var(--sc-foreground);
+  background-color: var(--st-input-bg);
+  background-image: var(--sc-bare-select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 12px 9px;
+  border: 1px solid var(--st-input-border);
+  border-radius: var(--st-control-radius);
+  box-shadow: var(--st-control-shadow);
+  vertical-align: middle;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+[data-bs-theme="dark"] .sc-content select:not([class]):not([multiple]):not([size]) {
+  --sc-bare-select-chevron: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23dee2e6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-color: var(--st-input-bg-dark);
+}
+[dir="rtl"] .sc-content select:not([class]):not([multiple]):not([size]) {
+  padding: 0 0.625rem 0 1.75rem;
+  background-position: left 0.55rem center;
+}
+.sc-content select:not([class]):not([multiple]):not([size]):focus {
+  outline: 0;
+  border-color: var(--sc-ring);
+  box-shadow: 0 0 0 3px rgba(var(--sc-ring-rgb), 0.25);
+}
+.sc-content select:not([class]) option {
+  background: var(--sc-popover);
+  color: var(--sc-foreground);
+}
+
 /* ------------------------------------------------------------ builder: bare small inputs
  * The page builder renders some inputs and selects with only form-control-sm
  * (no form-control / form-select): font size and line height, background and
@@ -3079,8 +3125,9 @@ html[data-bs-theme="dark"] .wf-drawer {
 }
 
 /* ------------------------------------------------------------ monaco
- * editors themed by shadcn.js; the builder's formula input box follows suit */
-[data-bs-theme="dark"] div.monaco-input.form-control { background-color: var(--sc-background); }
+ * editors themed by shadcn.js (which sets --sc-editor-bg); the builder's
+ * formula input box follows suit */
+div.monaco-input.form-control { background-color: var(--sc-editor-bg, var(--sc-background)); }
 
 /* ------------------------------------------------------------ calendar (flatpickr)
  * shadcn Calendar look for flatpickr (core's scheduler / grid edit, and the

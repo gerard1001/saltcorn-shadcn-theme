@@ -345,9 +345,56 @@ const lighten = (v, d) => {
   return v;
 };
 
+// "Light mode shade": 0 keeps the base's own (white) light surfaces; higher
+// values tint them with the base's hue, a little darker at each step
+const lightShades = { 25: 0.25, 50: 0.5, 75: 0.75, 100: 1 };
+const lightPages = ["tinted", "near-white", "white"];
+
+// the light mode can use another base than the dark one
+const baseFor = (config, mode) => {
+  const own = config.light_base_color;
+  if (mode === "light" && own && own !== "Same" && bases[own]) return bases[own];
+  return bases[config.base_color] || bases.Zinc;
+};
+
+// a tint of the base's hue at lightness 1 - drop: hue and chroma come from
+// its dark background (where the hue is strongest), or for legacy HSL bases
+// from their light muted colour
+const tintMaker = (base, f) => {
+  const ok = String(base.dark.background).match(
+    /^oklch\(\s*[\d.]+%?\s+([\d.]+)\s+([\d.]+)\s*\)$/,
+  );
+  if (ok) {
+    const C = Math.min(0.016, parseFloat(ok[1]) * 1.5) * (0.5 + 0.5 * f);
+    // less colour the closer to white, where sRGB has little room for it
+    return (drop) =>
+      `oklch(${(1 - drop).toFixed(4)} ${(C * Math.min(1, (drop + 0.01) / 0.06)).toFixed(4)} ${ok[2]})`;
+  }
+  const hsl = String(base.light.muted).match(/^([\d.]+)\s+([\d.]+)%/);
+  if (hsl) return (drop) => `${hsl[1]} ${hsl[2]}% ${(100 - drop * 100).toFixed(1)}%`;
+  return null;
+};
+
+const lightTint = (config, base) => {
+  const f = lightShades[config.light_shade];
+  const tint = f && tintMaker(base, f);
+  if (!tint) return base.light;
+  const d = 0.045 * f; // page background drop at this shade
+  const page = lightPages.includes(config.light_page) ? config.light_page : "tinted";
+  const vals = { ...base.light };
+  if (page !== "white") vals.background = tint(page === "tinted" ? d : d * 0.25);
+  // cards and popovers stay white so they lift off a tinted page
+  vals.sidebar = tint(d + 0.02);
+  for (const k of ["muted", "secondary", "accent"]) vals[k] = tint(d + 0.035);
+  for (const k of ["border", "input", "sidebar-border"])
+    if (vals[k] && !String(vals[k]).includes("/")) vals[k] = tint(0.075 + d * 0.6);
+  return vals;
+};
+
 const baseValues = (config, mode) => {
-  const base = bases[config.base_color] || bases.Zinc;
-  const d = mode === "dark" ? darkLift(config) : 0;
+  const base = baseFor(config, mode);
+  if (mode === "light") return lightTint(config, base);
+  const d = darkLift(config);
   if (!d) return base[mode];
   const vals = { ...base[mode] };
   for (const k of darkSurfaces) if (vals[k]) vals[k] = lighten(vals[k], d);
@@ -993,4 +1040,5 @@ module.exports = {
   toHex,
   resolveTokens,
   darkShades,
+  lightShades,
 };

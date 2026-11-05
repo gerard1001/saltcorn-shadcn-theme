@@ -54,6 +54,10 @@ without changes to Saltcorn core.
 - **Dark mode shade:** 100% (the base color's own dark), 75%, 50% or 25% (dim). Lower
   values lift the dark surfaces' lightness evenly, so cards, sidebar and borders keep
   their contrast with the page and secondary text stays readable.
+- **Light mode shade:** White (default), 25%, 50%, 75% or 100%. Higher values tint the
+  page, sidebar, muted areas and borders with the base color's hue (grey, blue, green…)
+  while cards stay white. The page itself can stay tinted, near white or white, and light
+  mode can use a different base color than dark mode.
 - **Primary color:** the base color (default), one of shadcn's 17 accent themes (Amber,
   Blue, Cyan, Emerald, Fuchsia, Green, Indigo, Lime, Orange, Pink, Purple, Red, Rose, Sky,
   Teal, Violet, Yellow), Mint (`#4cf490`, SpacetimeDB's green, not part of shadcn) or a
@@ -94,7 +98,8 @@ without changes to Saltcorn core.
 - **Accordion** in shadcn's bordered style (dividers, chevron at the end), **search inputs** as one
   control with the icon inside, **checkboxes** like shadcn's (also the bare ones core renders),
   **calendars** (flatpickr) like shadcn's Calendar, and **Monaco editors** (code
-  fields, builder formula inputs) follow light/dark, on the page background in dark mode.
+  fields, builder formula inputs) follow light/dark, on the page background (muted when
+  the page is as white as the card holding the editor, so it still shows).
 - Restyled auth pages (login, signup, forgot password).
 - RTL support (`bootstrap.rtl.min.css`).
 
