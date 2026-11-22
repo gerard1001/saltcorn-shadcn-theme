@@ -245,6 +245,130 @@ body {
   }
 }
 
+/* collapsed sidebar, "Icons only": a narrow rail of the menu's icons (or
+   initials); shadcn.js shows each item's name on hover and expands the
+   sidebar when a group is clicked */
+.sc-nav-initial {
+  display: none;
+}
+@media (min-width: 992px) {
+  .sc-sidebar-rail {
+    --sc-rail-width: 3.5rem;
+  }
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar,
+  [dir="rtl"] .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar {
+    width: var(--sc-rail-width);
+    flex-basis: var(--sc-rail-width);
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .sc-sidebar-floating.sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar {
+    margin-left: 0.5rem;
+  }
+  [dir="rtl"] .sc-sidebar-floating.sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar {
+    margin-left: 0;
+    margin-right: 0.5rem;
+  }
+  .sc-sidebar-inset.sc-sidebar-rail.sc-sidebar-collapsed > .sc-main {
+    margin-left: 0;
+  }
+  [dir="rtl"] .sc-sidebar-inset.sc-sidebar-rail.sc-sidebar-collapsed > .sc-main {
+    margin-left: 0.5rem;
+    margin-right: 0;
+  }
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar :is(
+      .sc-brand-name,
+      .sc-nav-text,
+      .sc-nav-kbd,
+      .sc-nav-chevron,
+      .sc-nav-label,
+      .sc-nav-sub,
+      .sc-sidebar-search,
+      .sc-user-text,
+      .sc-user-caret
+    ) {
+    display: none;
+  }
+  /* the brand (padded mark or logo) is wider than the header leaves free */
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar .sc-sidebar-header {
+    justify-content: center;
+    padding-inline: 0;
+  }
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar .sc-brand {
+    flex: none;
+    padding: 0.25rem;
+  }
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar .sc-sidebar-content {
+    overflow-x: hidden;
+    scrollbar-width: none;
+  }
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar .sc-nav-link {
+    justify-content: center;
+    gap: 0;
+    padding-inline: 0;
+  }
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar .sc-nav-icon {
+    width: auto;
+    flex: none;
+  }
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar .sc-nav-initial {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: calc(var(--bs-border-radius) * 0.75);
+    background: var(--sc-accent);
+    color: var(--sc-accent-foreground);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar .sc-nav-link:is(:hover, .active) .sc-nav-initial {
+    background: transparent;
+  }
+  /* a button-styled item becomes its icon (or initial); its label is a
+     .sc-nav-text, hidden above */
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar .sc-nav-button > a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-inline: 0;
+  }
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar .sc-nav-button > a > i {
+    margin: 0 !important;
+  }
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar .sc-nav-button .sc-nav-initial {
+    background: transparent;
+    color: inherit;
+    font-size: 0.75rem;
+  }
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar .sc-nav-separator {
+    margin-inline: 0.25rem;
+  }
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar .sc-sidebar-footer {
+    padding-inline: 0.375rem;
+  }
+  .sc-sidebar-rail.sc-sidebar-collapsed > .sc-sidebar .sc-user-trigger {
+    justify-content: center;
+    padding: 0.25rem 0;
+  }
+}
+/* the hover label for rail items */
+.sc-rail-tip {
+  position: fixed;
+  z-index: 1080;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--bs-border-radius);
+  background: var(--sc-foreground);
+  color: var(--sc-background);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
 .sc-sidebar-header {
   display: flex;
   align-items: center;
@@ -493,7 +617,9 @@ body {
   padding: 0.25rem;
 }
 .sc-topbar .sc-user-text,
-.sc-topbar .sc-user-caret {
+.sc-topbar .sc-user-caret,
+.sc-header .sc-user-text,
+.sc-header .sc-user-caret {
   display: none;
 }
 .sc-user-menu .dropdown-menu {
@@ -890,6 +1016,11 @@ html.sc-topbar-transparent.sc-scrolled:not(.sc-topbar-static) :is(.sc-topbar, .s
 .card.shadow-none,
 .card[style*="box-shadow: none"] {
   box-shadow: none !important;
+}
+/* home page lists (Tables, Views, Pages, Triggers…): core gives their body
+   "pe-0", so rows and the Edit column ran into the card's edge */
+.card.welcome-page-entity-list > .card-body.pe-0 {
+  padding-inline-end: var(--bs-card-spacer-x) !important;
 }
 /* the title-to-content gap sits in the header's bottom padding rather than
    the body's top, so the title is centred in its header and a scrolling body
@@ -1573,6 +1704,64 @@ caption {
   font-size: 0.875rem;
 }
 
+/* "Table style" setting (class on <html>); default needs no rules.
+ * Boxed: a rounded frame with a muted header row, like shadcn's data table.
+ * Striped: alternating row shades instead of dividers. Card rows tables
+ * (below) keep their own look. */
+.sc-tables-boxed .table:not(.table-card-rows) {
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--sc-border);
+  border-radius: var(--bs-border-radius-lg);
+  overflow: hidden;
+}
+.sc-tables-boxed .table:not(.table-card-rows) > thead > tr > * {
+  background-color: var(--sc-muted);
+  --bs-table-bg-type: var(--sc-muted);
+  border-bottom: 1px solid var(--sc-border);
+}
+.sc-tables-boxed .table:not(.table-card-rows) > :not(caption) > tr > :first-child {
+  padding-inline-start: calc(var(--st-cell-px) + 0.25rem);
+}
+.sc-tables-boxed .table:not(.table-card-rows) > :not(caption) > tr > :last-child {
+  padding-inline-end: calc(var(--st-cell-px) + 0.25rem);
+}
+/* table-bordered: the frame replaces the outer cell borders */
+.sc-tables-boxed .table-bordered:not(.table-card-rows) > :not(caption) > * > * {
+  border-width: 0 0 1px;
+}
+.sc-tables-striped .table:not(.table-card-rows) {
+  /* separate borders, so the shaded rows can have rounded ends */
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.sc-tables-striped .table:not(.table-card-rows) > :not(caption) > * > * {
+  border-bottom-width: 0;
+}
+.sc-tables-striped .table:not(.table-card-rows) > tbody > tr:nth-of-type(odd) > * {
+  --bs-table-bg-type: rgba(var(--sc-muted-rgb), 0.6);
+}
+.sc-tables-striped .table:not(.table-card-rows) > tbody > tr > :first-child {
+  border-start-start-radius: var(--bs-border-radius);
+  border-end-start-radius: var(--bs-border-radius);
+}
+.sc-tables-striped .table:not(.table-card-rows) > tbody > tr > :last-child {
+  border-start-end-radius: var(--bs-border-radius);
+  border-end-end-radius: var(--bs-border-radius);
+}
+.sc-tables-striped .table:not(.table-card-rows) > tbody > tr:hover > * {
+  --bs-table-bg-state: var(--sc-accent);
+}
+
+/* entities page, dark mode: the header row and the first section row
+   ("Recently edited") share a grey band with no visible divider; add one
+   in every table style (an inset line survives the styles' border resets).
+   The border colour is about the band's own here, so the line is drawn in a
+   faint text colour instead */
+[data-bs-theme="dark"] .table > thead + tbody > tr.entity-section-header-row:first-child > td {
+  box-shadow: inset 0 1px color-mix(in srgb, var(--sc-foreground) 16%, transparent);
+}
+
 /* list view "card rows" option (sbadmin2/tabler support it too) */
 #page-inner-content .table.table-card-rows {
   border-spacing: 0 8px;
@@ -1794,6 +1983,69 @@ caption {
   margin-left: -0.25rem;
   margin-right: -0.25rem;
 }
+/* "Searchable selects": the list a select opens (shadcn's Combobox / Command:
+   a borderless search row over the options), placed by shadcn.js */
+.sc-select-pop {
+  position: fixed;
+  z-index: 1090;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.sc-select-pop-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: 0.75rem;
+  border-bottom: 1px solid var(--sc-border);
+  color: var(--sc-muted-foreground);
+  font-size: 0.8125rem;
+}
+.sc-select-pop .sc-select-pop-search > input.form-control,
+[data-bs-theme="dark"] .sc-select-pop .sc-select-pop-search > input.form-control {
+  height: 2.25rem;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.875rem;
+}
+.sc-select-pop-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.25rem;
+}
+.sc-select-pop .dropdown-item {
+  cursor: default;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.sc-select-pop .dropdown-item:hover:not(.sc-hl) {
+  background: transparent;
+  color: inherit;
+}
+.sc-select-pop .dropdown-item.sc-hl {
+  background: var(--sc-accent);
+  color: var(--sc-accent-foreground);
+}
+.sc-select-pop .dropdown-item > i {
+  flex: none;
+  font-size: 0.75rem;
+}
+.sc-select-pop-blank > span {
+  color: var(--sc-muted-foreground);
+}
+.sc-select-pop-empty {
+  padding: 1.25rem 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--sc-muted-foreground);
+}
+
 /* flyout sub-menus (shadcn's DropdownMenuSub); opened and placed by
    shadcn.js, which flips them to the other side when there is no room */
 .sc-submenu {

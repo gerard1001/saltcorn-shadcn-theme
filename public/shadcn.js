@@ -38,6 +38,292 @@
   // the server only knows the configured mode ("auto" or the pre-toggle one)
   window._sc_lightmode = currentMode();
 
+  // "Searchable selects" setting: a select with many options opens a list
+  // with a search box instead of the native picker. The <select> itself is
+  // untouched (no wrapper, no hidden copy): only its picker is replaced, and a
+  // pick sets its value and fires input + change like the native one, so
+  // form posts, onchange handlers and core's dependent fields keep working.
+  // The options are read each time it opens, so selects filled later work too.
+  function searchableSelects() {
+    if (!document.documentElement.classList.contains("sc-searchable-selects")) return;
+    // touch screens keep the native picker, which is better there
+    if (window.matchMedia && matchMedia("(pointer: coarse)").matches) return;
+    var MIN_OPTIONS = 8;
+    var isMac = /Mac/.test(navigator.platform || "");
+    var pop = null, sel = null, list = null, input = null, items = [], hl = -1, seq = 0;
+
+    var eligible = function (s) {
+      return (
+        s && s.tagName === "SELECT" && !s.multiple && !(s.size > 1) &&
+        !s.matches(":disabled") && s.options.length >= MIN_OPTIONS &&
+        // React-controlled (page builder), other select widgets, opt-out
+        !s.closest("#saltcorn-builder, .monaco-editor, [data-native-select]") &&
+        !/\b(select2-hidden-accessible|tomselected|selectized|choices__input)\b/.test(s.className)
+      );
+    };
+    var fold = function (v) {
+      return String(v || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    };
+    var close = function (refocus) {
+      if (!pop) return;
+      var s = sel;
+      pop.remove();
+      pop = sel = list = input = null;
+      items = [];
+      if (refocus && s && s.isConnected) s.focus();
+    };
+    var visible = function () {
+      return items.filter(function (it) { return !it.el.hidden && !it.disabled; });
+    };
+    var highlight = function (it, scroll) {
+      items.forEach(function (x) { x.el.classList.remove("sc-hl"); });
+      hl = it ? items.indexOf(it) : -1;
+      if (!it) { input.removeAttribute("aria-activedescendant"); return; }
+      it.el.classList.add("sc-hl");
+      input.setAttribute("aria-activedescendant", it.el.id);
+      if (scroll) it.el.scrollIntoView({ block: "nearest" });
+    };
+    var pick = function (it) {
+      var s = sel;
+      close(true);
+      if (!s || !it || it.disabled || s.selectedIndex === it.index) return;
+      s.selectedIndex = it.index;
+      s.dispatchEvent(new Event("input", { bubbles: true }));
+      s.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    var filter = function () {
+      var q = fold(input.value).trim();
+      var any = false;
+      items.forEach(function (it) {
+        it.el.hidden = !!q && it.text.indexOf(q) < 0;
+        if (!it.el.hidden) any = true;
+      });
+      list.querySelectorAll(".dropdown-header").forEach(function (h) {
+        var n = h.nextElementSibling, show = false;
+        while (n && !n.classList.contains("dropdown-header")) {
+          if (!n.hidden) show = true;
+          n = n.nextElementSibling;
+        }
+        h.hidden = !show;
+      });
+      pop.querySelector(".sc-select-pop-empty").hidden = any;
+      var v = visible();
+      highlight(v.indexOf(items[hl]) >= 0 ? items[hl] : v[0], true);
+    };
+    var place = function () {
+      var r = sel.getBoundingClientRect();
+      var vw = document.documentElement.clientWidth, vh = window.innerHeight;
+      var w = Math.min(Math.max(r.width, 192), vw - 16);
+      pop.style.width = w + "px";
+      var rtl = getComputedStyle(sel).direction === "rtl";
+      var left = rtl ? r.right - w : r.left;
+      pop.style.left = Math.max(8, Math.min(left, vw - w - 8)) + "px";
+      var below = vh - r.bottom - 12, above = r.top - 12;
+      var up = below < 240 && above > below;
+      var room = Math.min(up ? above : below, 352);
+      list.style.maxHeight = Math.max(room - 52, 96) + "px";
+      pop.style.top = up ? "" : r.bottom + 4 + "px";
+      pop.style.bottom = up ? vh - r.top + 4 + "px" : "";
+    };
+    var open = function (s) {
+      close(false);
+      sel = s;
+      var id = "sc-select-pop-" + ++seq;
+      pop = document.createElement("div");
+      pop.className = "dropdown-menu show sc-select-pop";
+      pop.innerHTML =
+        '<div class="sc-select-pop-search"><i class="fas fa-search" aria-hidden="true"></i>' +
+        '<input type="text" class="form-control" role="combobox" aria-expanded="true" ' +
+        'aria-autocomplete="list" autocomplete="off" spellcheck="false"></div>' +
+        '<div class="sc-select-pop-list" role="listbox"></div>' +
+        '<div class="sc-select-pop-empty" hidden></div>';
+      input = pop.querySelector("input");
+      list = pop.querySelector(".sc-select-pop-list");
+      list.id = id;
+      input.setAttribute("aria-controls", id);
+      input.placeholder = "Search…";
+      pop.querySelector(".sc-select-pop-empty").textContent = "No results";
+      var label = s.labels && s.labels[0] ? s.labels[0].textContent.trim() : s.getAttribute("aria-label");
+      if (label) input.setAttribute("aria-label", label);
+      var group = null;
+      Array.prototype.forEach.call(s.options, function (o, i) {
+        if (o.hidden) return;
+        var g = o.parentElement.tagName === "OPTGROUP" ? o.parentElement : null;
+        if (g !== group) {
+          group = g;
+          if (g) {
+            var h = document.createElement("div");
+            h.className = "dropdown-header";
+            h.textContent = g.label;
+            list.appendChild(h);
+          }
+        }
+        var el = document.createElement("div");
+        var txt = o.text.trim();
+        el.className = "dropdown-item" + (txt ? "" : " sc-select-pop-blank");
+        el.id = id + "-" + i;
+        el.setAttribute("role", "option");
+        el.setAttribute("aria-selected", i === s.selectedIndex ? "true" : "false");
+        var span = document.createElement("span");
+        span.textContent = txt || "—";
+        el.appendChild(span);
+        if (i === s.selectedIndex)
+          el.insertAdjacentHTML("beforeend", '<i class="fas fa-check" aria-hidden="true"></i>');
+        var disabled = o.disabled || (g && g.disabled);
+        if (disabled) el.classList.add("disabled"), el.setAttribute("aria-disabled", "true");
+        list.appendChild(el);
+        items.push({ el: el, index: i, disabled: disabled, text: fold(txt) });
+      });
+      // inside a modal or offcanvas, so Bootstrap's focus trap allows the input
+      (s.closest(".modal, .offcanvas") || document.body).appendChild(pop);
+      place();
+      input.focus({ preventScroll: true });
+      var current = items.filter(function (it) { return it.index === s.selectedIndex; })[0];
+      highlight(current && !current.disabled ? current : visible()[0], false);
+      if (current) list.scrollTop = current.el.offsetTop - list.clientHeight / 2 + current.el.offsetHeight / 2;
+
+      input.addEventListener("input", filter);
+      input.addEventListener("keydown", function (e) {
+        var v = visible(), at = v.indexOf(items[hl]);
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          if (v.length) highlight(v[e.key === "ArrowDown" ? Math.min(at + 1, v.length - 1) : Math.max(at - 1, 0)], true);
+        } else if (e.key === "PageDown" || e.key === "PageUp") {
+          e.preventDefault();
+          if (v.length) highlight(v[e.key === "PageDown" ? Math.min(at + 8, v.length - 1) : Math.max(at - 8, 0)], true);
+        } else if (e.key === "Enter") {
+          e.preventDefault(); // never submits the form
+          if (items[hl] && !items[hl].el.hidden) pick(items[hl]);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation(); // closes only the list, not a modal around it
+          close(true);
+        } else if (e.key === "Tab") {
+          close(true); // Tab then moves on from the select
+        }
+      });
+      // keep focus in the search box while clicking in the list
+      pop.addEventListener("mousedown", function (e) {
+        if (e.target !== input) e.preventDefault();
+      });
+      list.addEventListener("click", function (e) {
+        var el = e.target.closest(".dropdown-item");
+        var it = items.filter(function (x) { return x.el === el; })[0];
+        if (it && !it.disabled) pick(it);
+      });
+      list.addEventListener("mousemove", function (e) {
+        var el = e.target.closest(".dropdown-item");
+        var it = items.filter(function (x) { return x.el === el; })[0];
+        if (it && !it.disabled && items[hl] !== it) highlight(it, false);
+      });
+    };
+
+    document.addEventListener(
+      "mousedown",
+      function (e) {
+        if (pop && pop.contains(e.target)) return;
+        var s = e.target.closest && e.target.closest("select");
+        if (e.button !== 0 || !eligible(s)) {
+          close(false);
+          return;
+        }
+        e.preventDefault(); // no native picker
+        if (s === sel) return close(true); // second click closes, like native
+        s.focus({ preventScroll: true });
+        open(s);
+      },
+      true
+    );
+    document.addEventListener(
+      "keydown",
+      function (e) {
+        var s = e.target;
+        if (s.tagName !== "SELECT" || !eligible(s)) return;
+        // the keys that open the native picker; others (letters, and arrows
+        // outside macOS) keep changing the value in place
+        var opens =
+          e.key === " " || e.key === "F4" ||
+          ((e.key === "ArrowDown" || e.key === "ArrowUp") && (e.altKey || isMac));
+        if (!opens || e.ctrlKey || e.metaKey) return;
+        e.preventDefault();
+        open(s);
+      },
+      true
+    );
+    window.addEventListener("resize", function () { close(false); });
+    document.addEventListener(
+      "scroll",
+      function (e) {
+        if (pop && !pop.contains(e.target)) close(false);
+      },
+      true
+    );
+  }
+
+  // collapsed sidebar, "Icons only" (CSS draws the rail): a label beside the
+  // hovered item, and a click on a group expands the sidebar with it open
+  function railHelpers() {
+    var shell = document.getElementById("sc-shell");
+    var sidebar = document.getElementById("sc-sidebar");
+    if (!shell || !sidebar || !shell.classList.contains("sc-sidebar-rail")) return;
+    var isRail = function () {
+      return (
+        shell.classList.contains("sc-sidebar-collapsed") &&
+        window.matchMedia("(min-width: 992px)").matches
+      );
+    };
+    var tip = null;
+    var hideTip = function () {
+      if (tip) tip.remove();
+      tip = null;
+    };
+    sidebar.addEventListener("mouseover", function (e) {
+      var link = isRail() && e.target.closest && e.target.closest(".sc-nav-link, .sc-nav-button > a");
+      if (!link) return hideTip();
+      var label = ((link.querySelector(".sc-nav-text") || link).textContent || "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!label) return hideTip();
+      if (!tip) {
+        tip = document.createElement("div");
+        tip.className = "sc-rail-tip";
+        tip.setAttribute("role", "tooltip");
+        document.body.appendChild(tip);
+      }
+      tip.textContent = label;
+      var r = link.getBoundingClientRect();
+      var s = sidebar.getBoundingClientRect();
+      var rtl = document.documentElement.dir === "rtl";
+      tip.style.top = r.top + r.height / 2 + "px";
+      tip.style.left = rtl ? "" : s.right + 8 + "px";
+      tip.style.right = rtl ? window.innerWidth - s.left + 8 + "px" : "";
+    });
+    sidebar.addEventListener("mouseleave", hideTip);
+    new MutationObserver(hideTip).observe(shell, { attributes: true, attributeFilter: ["class"] });
+    sidebar.addEventListener("scroll", hideTip, true);
+    // the items' own Bootstrap tooltips would cover the label
+    sidebar.addEventListener("show.bs.tooltip", function (e) {
+      if (isRail()) e.preventDefault();
+    });
+    sidebar.addEventListener(
+      "click",
+      function (e) {
+        var toggle = isRail() && e.target.closest && e.target.closest(".sc-nav-toggle");
+        if (!toggle) return;
+        e.preventDefault();
+        e.stopPropagation();
+        hideTip();
+        var toggler = document.querySelector("[data-sidebar-toggler]");
+        // core's handler on the toggler remembers the state
+        if (toggler) toggler.click();
+        else shell.classList.remove("sc-sidebar-collapsed");
+        var sub = document.getElementById((toggle.getAttribute("href") || "").slice(1));
+        if (sub && window.bootstrap) bootstrap.Collapse.getOrCreateInstance(sub, { toggle: false }).show();
+      },
+      true
+    );
+  }
+
   function onReady() {
     initBootstrapWidgets(document);
     // entities page: core gives its bulk-action selects an inline
@@ -49,6 +335,8 @@
     setTimeout(function () {
       document.body.classList.add("sc-ready");
     }, 50);
+    railHelpers();
+    searchableSelects();
     // close the mobile sidebar when navigating within the page
     var sidebar = document.getElementById("sc-sidebar");
     if (sidebar && window.bootstrap) {

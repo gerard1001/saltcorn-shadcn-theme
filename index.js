@@ -103,6 +103,15 @@ const showIcon = (icon, cls) =>
     ? show_icon(icon, cls)
     : i({ class: ["fa-fw", cls, icon] });
 
+// stands in for a missing icon in the collapsed (icons only) sidebar
+const railInitial = (item) =>
+  hasIcon(item.icon)
+    ? ""
+    : span(
+        { class: "sc-nav-initial", "aria-hidden": "true" },
+        text(Array.from(String(item.label || "").trim())[0] || "•")
+      );
+
 const tooltipAttrs = (item, placement) =>
   item.tooltip
     ? {
@@ -193,7 +202,8 @@ const sidebarItem = (ctx, path) => (item, ix) => {
           ...tooltipAttrs(item, ctx.tooltipPlacement),
         },
         showIcon(item.icon, "me-1"),
-        text(item.label)
+        railInitial(item),
+        span({ class: "sc-nav-text" }, text(item.label))
       )
     );
   if (item.subitems) {
@@ -214,6 +224,7 @@ const sidebarItem = (ctx, path) => (item, ix) => {
           ...(item.tooltip ? { title: item.tooltip } : {}),
         },
         showIcon(item.icon, "sc-nav-icon"),
+        railInitial(item),
         span({ class: "sc-nav-text" }, text(item.label)),
         i({ class: "fas fa-chevron-right sc-nav-chevron" })
       ),
@@ -234,6 +245,7 @@ const sidebarItem = (ctx, path) => (item, ix) => {
           ...tooltipAttrs(item, ctx.tooltipPlacement),
         },
         showIcon(item.icon, "sc-nav-icon"),
+        railInitial(item),
         span({ class: "sc-nav-text" }, text(item.label)),
         item.shortcut &&
           span({ class: "sc-nav-kbd", "aria-hidden": "true" }, text(item.shortcut))
@@ -436,6 +448,7 @@ const sidebar = (ctx, { primary, secondary, user }) =>
         )
     ),
     user.length > 0 &&
+      ctx.config.user_menu_position !== "header" &&
       div(
         { class: "sc-sidebar-footer" },
         userMenu(ctx, user, { placement: "up" })
@@ -519,18 +532,19 @@ const headerItems = (ctx, items) =>
 
 // on desktop the header only appears when it has something to show; on
 // small screens it is always there, as it holds the menu button
-const headerHasDesktopContent = (config, secondary) =>
+const headerHasDesktopContent = (config, secondary, user) =>
   config.collapsible_sidebar !== false ||
+  (config.user_menu_position === "header" && user.length > 0) ||
   !!config.show_title ||
   !!config.show_mode_toggle ||
   secondary.length > 0;
 
-const sidebarHeader = (ctx, { secondary }) =>
+const sidebarHeader = (ctx, { secondary, user }) =>
   header(
     {
       class: [
         "sc-header d-print-none",
-        !headerHasDesktopContent(ctx.config, secondary) && "d-lg-none",
+        !headerHasDesktopContent(ctx.config, secondary, user) && "d-lg-none",
       ],
     },
     button(
@@ -569,7 +583,10 @@ const sidebarHeader = (ctx, { secondary }) =>
     div(
       { class: "sc-header-actions" },
       div({ class: "d-none d-lg-flex align-items-center gap-1" }, headerItems(ctx, secondary)),
-      modeToggle(ctx.config)
+      modeToggle(ctx.config),
+      ctx.config.user_menu_position === "header" &&
+        user.length > 0 &&
+        userMenu({ ...ctx, inHeader: true }, user, { placement: "down" })
     )
   );
 
@@ -798,13 +815,20 @@ const toastStyles = [
   { name: "rich", label: "Rich colors", hint: "tinted in the type's colour" },
   { name: "accent", label: "Accent", hint: "card with a coloured edge" },
 ];
+const tableStyles = [
+  { name: "default", label: "Default: row dividers" },
+  { name: "boxed", label: "Boxed: framed, with a muted header row" },
+  { name: "striped", label: "Striped: alternating row shades, no dividers" },
+];
 const oneOf = (list, v, dflt) => (list.some((o) => o.name === v) ? v : dflt);
 // top bar position and background, on <html> so they reach both the Topbar
 // layout's bar and the Sidebar layout's header
 const barClasses = (config) => {
   const bg = topbarBackgrounds.includes(config.topbar_bg) ? config.topbar_bg : "Default";
   return [
-    config.topbar_position === "static" && "sc-topbar-static",
+    // topbar_fixed replaced the older topbar_position select ("fixed"/"static")
+    (config.topbar_fixed ?? config.topbar_position !== "static") === false &&
+      "sc-topbar-static",
     bg === "Transparent" && "sc-topbar-transparent",
     bg === "Transparent" && config.topbar_light_text && "sc-topbar-light-text",
     bg !== "Default" && bg !== "Transparent" && "sc-topbar-solid",
@@ -858,13 +882,93 @@ const toastStylePicker = () =>
   s.addEventListener('change', sync); sync();
 });`);
 
+// "Backup" on the configuration page: Export downloads the settings as they
+// are in the form (unsaved edits included) as JSON; Import fills the form from
+// such a file. Nothing is saved until the form's own Finish, so a wrong file
+// can be undone by leaving the page.
+const settingsBackup = (names) =>
+  div(
+    { class: "sc-settings-backup" },
+    div(
+      { class: "d-flex flex-wrap gap-2 align-items-center" },
+      button({ type: "button", class: "btn btn-outline-secondary btn-sm", "data-sc-export": "" },
+        i({ class: "fas fa-download me-1" }), "Export"),
+      button({ type: "button", class: "btn btn-outline-secondary btn-sm", "data-sc-import": "" },
+        i({ class: "fas fa-upload me-1" }), "Import"),
+      input({ type: "file", accept: "application/json,.json", hidden: true, "data-sc-import-file": "" }),
+      span({ class: "sc-settings-backup-msg small text-muted", role: "status" })
+    ),
+    p({ class: "small text-muted mb-0 mt-1" },
+      "Export saves these settings, including unsaved changes, to a JSON file. Import fills the form from one; click Finish to apply it.")
+  ) +
+  script(`document.addEventListener('DOMContentLoaded', function(){
+  var names = ${JSON.stringify(names)};
+  var box = document.querySelector('.sc-settings-backup');
+  var form = box && box.closest('form');
+  if (!form) return;
+  var msg = box.querySelector('.sc-settings-backup-msg');
+  var file = box.querySelector('[data-sc-import-file]');
+  var say = function(t, bad){ msg.textContent = t; msg.classList.toggle('text-danger', !!bad); msg.classList.toggle('text-muted', !bad); };
+  var els = function(n){ return Array.prototype.filter.call(form.elements, function(e){ return e.name === n; }); };
+  var read = function(n){
+    var es = els(n); if (!es.length) return undefined;
+    var e = es[0];
+    if (e.type === 'radio') { var c = es.filter(function(x){ return x.checked; })[0]; return c ? c.value : null; }
+    if (e.type === 'checkbox') return e.checked;
+    if (e.type === 'hidden' && es[1] && es[1].type === 'checkbox') return es[1].checked;
+    return e.value;
+  };
+  var write = function(n, v){
+    var es = els(n).filter(function(e){ return e.type !== 'hidden' || els(n).length === 1; });
+    if (!es.length) return false;
+    es.forEach(function(e){
+      if (e.type === 'radio') e.checked = e.value === String(v);
+      else if (e.type === 'checkbox') e.checked = v === true || v === 'on' || v === 'true';
+      else e.value = v == null ? '' : v;
+      e.dispatchEvent(new Event('input', { bubbles: true }));
+      e.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    return true;
+  };
+  box.querySelector('[data-sc-export]').addEventListener('click', function(){
+    var settings = {};
+    names.forEach(function(n){ var v = read(n); if (v !== undefined) settings[n] = v; });
+    var data = JSON.stringify({ theme: 'shadcn-theme', exported: new Date().toISOString(), settings: settings }, null, 2);
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+    a.download = 'shadcn-theme-settings-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+    say('Exported ' + Object.keys(settings).length + ' settings');
+  });
+  box.querySelector('[data-sc-import]').addEventListener('click', function(){ file.value = ''; file.click(); });
+  file.addEventListener('change', function(){
+    var f = file.files && file.files[0]; if (!f) return;
+    f.text().then(function(t){
+      var j = JSON.parse(t);
+      var s = j && typeof j.settings === 'object' ? j.settings : j;
+      if (!s || typeof s !== 'object' || Array.isArray(s)) throw new Error();
+      var n = 0;
+      names.forEach(function(k){ if (Object.prototype.hasOwnProperty.call(s, k) && write(k, s[k])) n++; });
+      if (!n) return say('No settings found in ' + f.name, true);
+      say('Imported ' + n + ' settings from ' + f.name + '. Click Finish to apply them');
+    }).catch(function(){ say(f.name + ' is not a settings file', true); });
+  });
+});`);
+
 const wrapIt = (config, cssCache, bodyAttr, headers, title, body, req) => {
   const mode = resolvedMode(config);
   const isRTL = !!req?.isRTL;
   return `<!doctype html>
 <html lang="${text_attr(req?.getLocale?.() || "en")}" class="sc-style-${styleFor(
     config
-  ).toLowerCase()} ${toastClasses(config)} ${barClasses(config)}" data-bs-theme="${
+  ).toLowerCase()} ${toastClasses(config)} sc-tables-${oneOf(
+    tableStyles,
+    config.table_style,
+    "default"
+  )} ${barClasses(config)}${
+    config.searchable_selects ? " sc-searchable-selects" : ""
+  }" data-bs-theme="${
     mode === "dark" ? "dark" : "light"
   }"${isRTL ? ' dir="rtl"' : ""}>
   <head>
@@ -947,6 +1051,7 @@ const wrap =
           id: "sc-shell",
           class: [
             "sc-shell sc-shell-sidebar",
+            config.collapsed_sidebar !== "hidden" && "sc-sidebar-rail",
             config.sidebar_variant === "Floating" && "sc-sidebar-floating",
             config.sidebar_variant === "Inset" && "sc-sidebar-inset",
           ],
@@ -1145,8 +1250,7 @@ const configuration_workflow = () =>
         form: async () => {
           const userTable = Table.findOne({ name: "users" });
           const userFields = userTable ? await userTable.getFields() : [];
-          return new Form({
-            fields: [
+          const fields = [
               formSection("Layout"),
               {
                 name: "layout_style",
@@ -1173,9 +1277,41 @@ const configuration_workflow = () =>
               {
                 name: "collapsible_sidebar",
                 label: "Collapsible sidebar",
-                sublabel: "Show a button that hides the sidebar on desktop",
+                sublabel: "Show a button that collapses the sidebar on desktop",
                 type: "Bool",
                 default: true,
+                showIf: { layout_style: ["Sidebar", "No menu"] },
+              },
+              {
+                name: "collapsed_sidebar",
+                label: "Collapsed sidebar",
+                sublabel:
+                  "Icons only keeps a narrow strip of menu icons (names show on hover; items without an icon show their first letter)",
+                type: "String",
+                required: true,
+                default: "icons",
+                attributes: {
+                  options: [
+                    { name: "icons", label: "Icons only" },
+                    { name: "hidden", label: "Hidden" },
+                  ],
+                },
+                showIf: { layout_style: ["Sidebar", "No menu"], collapsible_sidebar: true },
+              },
+              {
+                name: "user_menu_position",
+                label: "User menu",
+                sublabel:
+                  "Where the avatar with the user menu sits: the bottom of the sidebar, or the right end of the header bar",
+                type: "String",
+                required: true,
+                default: "sidebar",
+                attributes: {
+                  options: [
+                    { name: "sidebar", label: "Sidebar (bottom)" },
+                    { name: "header", label: "Header (top right)" },
+                  ],
+                },
                 showIf: { layout_style: ["Sidebar", "No menu"] },
               },
               {
@@ -1278,6 +1414,23 @@ const configuration_workflow = () =>
                     { name: "75", label: "75%" },
                     { name: "50", label: "50%" },
                     { name: "25", label: "25% (dim)" },
+                  ],
+                },
+              },
+              {
+                name: "dark_card",
+                label: "Dark mode cards",
+                sublabel:
+                  "How much lighter cards and popups are than the page in dark mode. Base color keeps the base's own (some bases use the page color)",
+                type: "String",
+                required: true,
+                default: "base",
+                attributes: {
+                  options: [
+                    { name: "base", label: "Base color" },
+                    { name: "subtle", label: "Subtle" },
+                    { name: "clear", label: "Clear" },
+                    { name: "strong", label: "Strong" },
                   ],
                 },
               },
@@ -1463,7 +1616,8 @@ const configuration_workflow = () =>
                 sublabel:
                   "White text and icons while the bar sits on a background image at the top of the page (for dark images)",
                 type: "Bool",
-                showIf: { topbar_bg: "Transparent" },
+                // background images only run under the bar in the Topbar layout
+                showIf: { topbar_bg: "Transparent", layout_style: "Topbar" },
               },
               {
                 name: "topbar_opacity",
@@ -1486,17 +1640,11 @@ const configuration_workflow = () =>
                 showIf: { topbar_bg: ["Default", "Transparent"] },
               },
               {
-                name: "topbar_position",
-                label: "Top bar position",
-                type: "String",
-                required: true,
-                default: "fixed",
-                attributes: {
-                  options: [
-                    { name: "fixed", label: "Fixed at the top" },
-                    { name: "static", label: "Scrolls with the page" },
-                  ],
-                },
+                name: "topbar_fixed",
+                label: "Fixed top bar",
+                sublabel: "Keep the bar at the top while the page scrolls; unchecked, it scrolls away with the page",
+                type: "Bool",
+                default: true,
               },
 
               formSection("Toasts"),
@@ -1524,6 +1672,28 @@ const configuration_workflow = () =>
                 attributes: { options: toastStyles.map(({ name, label }) => ({ name, label })) },
               },
 
+              formSection("Forms"),
+              {
+                name: "searchable_selects",
+                label: "Searchable selects",
+                sublabel:
+                  "Dropdowns with 8 or more options open a list with a search box. The select itself is unchanged, so forms and change events work as before; touch screens keep the native picker",
+                type: "Bool",
+                default: false,
+              },
+
+              formSection("Tables"),
+              {
+                name: "table_style",
+                label: "Table style",
+                sublabel:
+                  "Lists, admin tables and other Bootstrap tables. Card rows tables keep their own look",
+                type: "String",
+                required: true,
+                default: "default",
+                attributes: { options: tableStyles },
+              },
+
               formSection("Style"),
               {
                 name: "style",
@@ -1534,6 +1704,19 @@ const configuration_workflow = () =>
                 required: true,
                 default: "Default",
                 attributes: { options: Object.keys(styles) },
+              },
+            ];
+          // export / import after the settings, covering every real setting
+          const names = fields.filter((f) => f.name && !f.input_type).map((f) => f.name);
+          return new Form({
+            fields: [
+              ...fields,
+              formSection("Backup"),
+              {
+                name: "settings_backup",
+                label: "Settings file",
+                input_type: "custom_html",
+                attributes: { html: settingsBackup(names) },
               },
             ],
           });

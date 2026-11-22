@@ -382,25 +382,37 @@ const lightTint = (config, base) => {
   const d = 0.045 * f; // page background drop at this shade
   const page = lightPages.includes(config.light_page) ? config.light_page : "tinted";
   const vals = { ...base.light };
+  // legacy bases (Slate, Gray) have no card colour and would take the
+  // tinted page's; cards stay on the untinted background
+  vals.card = vals.card || base.light.background;
+  vals.popover = vals.popover || vals.card;
   if (page !== "white") vals.background = tint(page === "tinted" ? d : d * 0.25);
   // cards and popovers stay white so they lift off a tinted page
   vals.sidebar = tint(d + 0.02);
-  for (const k of ["muted", "secondary", "accent"]) vals[k] = tint(d + 0.035);
+  for (const k of ["muted", "secondary"]) vals[k] = tint(d + 0.035);
+  // hover / active items: a clear step past the sidebar's own tint
+  vals.accent = tint(d + 0.06);
   for (const k of ["border", "input", "sidebar-border"])
     if (vals[k] && !String(vals[k]).includes("/")) vals[k] = tint(0.075 + d * 0.6);
   return vals;
 };
 
+// "Dark mode cards": how far cards (and popups) sit above the page's
+// lightness; unset keeps the base's own (the same as the page for some bases)
+const darkCards = { subtle: 0.03, clear: 0.06, strong: 0.09 };
+
 const baseValues = (config, mode) => {
   const base = baseFor(config, mode);
   if (mode === "light") return lightTint(config, base);
   const d = darkLift(config);
-  if (!d) return base[mode];
+  const raise = darkCards[config.dark_card];
+  if (!d && !raise) return base[mode];
   const vals = { ...base[mode] };
   for (const k of darkSurfaces) if (vals[k]) vals[k] = lighten(vals[k], d);
   // keep secondary text readable on the lighter surfaces
-  if (vals["muted-foreground"])
+  if (d && vals["muted-foreground"])
     vals["muted-foreground"] = lighten(vals["muted-foreground"], d / 2);
+  if (raise) vals.card = vals.popover = lighten(vals.background, raise);
   return vals;
 };
 
@@ -410,8 +422,9 @@ const resolveTokens = (config, mode) => {
   const bg = toRgb(vals.background);
   for (const [k, v] of Object.entries(vals)) t[k] = toRgb(v, bg);
   // hover / selected surfaces always use the neutral base secondary, even when
-  // the secondary colour itself is customised below
-  t.accent = t.secondary;
+  // the secondary colour itself is customised below; a light shade sets its
+  // own, a clear step past the tinted sidebar
+  if (!(mode === "light" && lightShades[config.light_shade])) t.accent = t.secondary;
   t["accent-foreground"] = t["secondary-foreground"];
 
   // "accent_color" is the stored name of the Primary color setting
@@ -625,6 +638,7 @@ const fonts = {
   }),
   Poppins: sans(`"Poppins"`, { label: "Poppins" }),
   Roboto: sans(`"Roboto Variable", "Roboto"`, { label: "Roboto" }),
+  Lato: sans(`"Lato"`, { label: "Lato" }),
   "DM Sans": sans(`"DM Sans Variable", "DM Sans"`, { label: "DM Sans" }),
   "Plus Jakarta Sans": sans(
     `"Plus Jakarta Sans Variable", "Plus Jakarta Sans"`,

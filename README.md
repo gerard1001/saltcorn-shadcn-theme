@@ -36,7 +36,11 @@ without changes to Saltcorn core.
   Alt+letter keys), single-key shortcuts are ignored while typing, and ⌘/Ctrl+B is left
   to rich-text and code editors (bold).
 - **Collapsible sidebar** on desktop. It uses core's `data-sidebar-toggler`, so the
-  state is remembered. On mobile the sidebar becomes an off-canvas drawer.
+  state is remembered. Collapsed, it becomes a narrow rail of the menu icons (default;
+  items without an icon show their first letter, names show on hover, clicking a group
+  expands the sidebar with that group open) or hides completely. On mobile the sidebar becomes an off-canvas drawer.
+- **User menu** (Sidebar layout): at the bottom of the sidebar (default) or as an avatar
+  at the right end of the header, on desktop and phones.
 - **Sidebar menu groups** start collapsed (default) or expanded. Expanded opens only the
   top-level groups; nested ones stay closed. The group holding the current page is always
   open.
@@ -54,6 +58,8 @@ without changes to Saltcorn core.
 - **Dark mode shade:** 100% (the base color's own dark), 75%, 50% or 25% (dim). Lower
   values lift the dark surfaces' lightness evenly, so cards, sidebar and borders keep
   their contrast with the page and secondary text stays readable.
+- **Dark mode cards:** Base color (the base's own; Slate and Gray use the page colour),
+  Subtle, Clear or Strong: how much lighter cards and popups are than the dark page.
 - **Light mode shade:** White (default), 25%, 50%, 75% or 100%. Higher values tint the
   page, sidebar, muted areas and borders with the base color's hue (grey, blue, green…)
   while cards stay white. The page itself can stay tinted, near white or white, and light
@@ -69,7 +75,7 @@ without changes to Saltcorn core.
 - **Radius:** 0 to 1rem.
 - **Font** (all bundled, SIL OFL; pages only download the faces they use):
   Inter (default), Geist + Geist Mono (shadcn/ui's current default), IBM Plex Sans,
-  Poppins, Roboto, DM Sans, Plus Jakarta Sans, Manrope, Figtree, Outfit, Space Grotesk,
+  Poppins, Roboto, Lato, DM Sans, Plus Jakarta Sans, Manrope, Figtree, Outfit, Space Grotesk,
   Nunito Sans, Public Sans, Work Sans, Raleway, Sora, Onest, JetBrains Mono, or the system font, at a base size of 14, 16, 18, 20 or 24px (the whole interface scales with it). All of them are also offered in the
   page builder's font picker.
 - **Light / dark / follow system** modes:
@@ -85,6 +91,18 @@ without changes to Saltcorn core.
 - **Entities page:** each type (table, view, page, trigger, module, user, role) gets its own
   hue from one matched OKLCH set, shown as a small tinted icon tile beside a plain label; the
   type filter buttons use the same hues, and Details badges are quiet outline badges.
+- **Table style** (Tables section): Default (row dividers), Boxed (a rounded frame with a
+  muted header row, like shadcn's data table) or Striped (alternating row shades, no
+  dividers). Applies to list views, admin tables and other Bootstrap tables; card rows
+  tables keep their own look.
+- **Searchable selects** (Forms section, off by default): dropdowns with 8 or more options
+  open a list with a search box (shadcn's Combobox look, with option groups and a check on
+  the current value). Only the picker is replaced: the `<select>` stays in the form, and a
+  pick sets its value and fires `input` and `change`, so form posts, `onchange` handlers and
+  core's dependent fields keep working. Options are read each time it opens. Space, F4,
+  Alt+↓ (and ↓/↑ on a Mac) open it; letters and arrows elsewhere keep changing the value in
+  place. Touch screens, multi-selects, the page builder, other select widgets and selects
+  marked `data-native-select` keep the native picker.
 - **Toasts:** position (top/bottom × left/center/right) and style (Classic, Sonner, Rich colors,
   Accent) settings, picked from live previews; every style keeps the success/info/warning/error colours.
 - **Workflow runs:** step traces shown as a shadcn Trace (status icon, step name, duration; click a
@@ -118,7 +136,10 @@ The token stylesheet is generated once per configuration and inlined into each p
 The theme's own CSS/JS URLs carry the file's modification time (`?v=…`), so browsers
 pick up changes immediately despite Saltcorn's 100-day cache on plugin files.
 
-All settings are on a single configuration page. Core's "Reload page to see changes"
+All settings are on a single configuration page. Its **Backup** section, at the bottom, exports them, as
+they are in the form (unsaved changes included), to a JSON file, and imports such a file
+back into the form; nothing is saved until you click Finish. Settings missing from the file
+are left as they are, so a file from an older version still imports. Core's "Reload page to see changes"
 restarts the workflow at its first step, so a multi-step form looked as if it lost the
 later steps' changes.
 
