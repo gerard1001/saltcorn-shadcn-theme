@@ -1,6 +1,6 @@
 {
   "name": "@saltcorn/shadcn-theme",
-  "version": "0.2.1",
+  "version": "0.1.0",
   "description": "shadcn/ui-style layout for Saltcorn, built on Bootstrap 5.3",
   "main": "index.js",
   "scripts": {
